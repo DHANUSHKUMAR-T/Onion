@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Transport Monitoring System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDonsIyRdqK82JTvJ37yHtMFgAoFahwDuw&callback=initMap"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+        }
+        .overflow-x-auto::-webkit-scrollbar {
+            height: 8px;
+        }
+        .overflow-x-auto::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1; /* gray-300 */
+            border-radius: 4px;
+        }
+        .overflow-x-auto::-webkit-scrollbar-track {
+            background-color: #f1f5f9; /* gray-100 */
+        }
+    </style>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+       
+
+        const {
+            Car, MapPin, Truck, History, Bell, Settings, LogIn, LogOut, Search, Filter,
+            Eye, XCircle, Users, ClipboardList, Package, PlusCircle, User, Fuel, Calendar, Clock, Route, Wrench, Info, Loader2
+        } = window['lucide-react'] || {
+            Car: ({ size, className }) => <span style={{ fontSize: size }} className={className}>🚗</span>,
+            MapPin: ({ size, className }) => <span style={{ fontSize: size }} className={className}>📍</span>,
+            Truck: ({ size, className }) => <span style={{ fontSize: size }} className={className}>🚚</span>,
+            History: ({ size, className }) => <span style={{ fontSize: size }} className={className}>📜</span>,
+            Bell: ({ size, className }) => <span style={{ fontSize: size }} className={className}>🔔</span>,
+            Settings: ({ size, className }) => <span style={{ fontSize: size }} className={className}>⚙️</span>,
+            LogIn: ({ size, className }) => <span style={{ fontSize: size }} className={className}>➡️</span>,
+            LogOut: ({ size, className }) => <span style={{ fontSize: size }} className={className}>⬅️</span>,
+            Search: ({ size, className }) => <span style={{ fontSize: size }} className={className}>🔍</span>,
+            Filter: ({ size, className }) => <span style={{ fontSize: size }} className={className}> filtro</span>,
+            Eye: ({ size, className }) => <span style={{ fontSize: size }} className={className}>👁️</span>,
+            XCircle: ({ size, className }) => <span style={{ fontSize: size }} className={className}>❌</span>,
+            Users: ({ size, className }) => <span style={{ fontSize: size }} className={className}>👥</span>,
+            ClipboardList: ({ size, className }) => <span style={{ fontSize: size }} className={className}>📋</span>,
+            Package: ({ size, className }) => <span style={{ fontSize: size }} className={className}>📦</span>,
+            PlusCircle: ({ size, className }) => <span style={{ fontSize: size }} className={className}>➕</span>,
+            User: ({ size, className }) => <span style={{ fontSize: size }} className={className}>👤</span>,
+            Fuel: ({ size, className }) => <span style={{ fontSize: size }} className={className}>⛽</span>,
+            Calendar: ({ size, className }) => <span style={{ fontSize: size }} className={className}>📅</span>,
+            Clock: ({ size, className }) => <span style={{ fontSize: size }} className={className}>⏰</span>,
+            Route: ({ size, className }) => <span style={{ fontSize: size }} className={className}>🛣️</span>,
+            Wrench: ({ size, className }) => <span style={{ fontSize: size }} className={className}>🔧</span>,
+            Info: ({ size, className }) => <span style={{ fontSize: size }} className={className}>ℹ️</span>,
+            Loader2: ({ size, className }) => <span style={{ fontSize: size }} className={className}>🔄</span>,
+        };
+
+
+        const { useState, useEffect, createContext, useContext } = React;
+        const AppContext = createContext();
+
+        const AppProvider = ({ children }) => {
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [userRole, setUserRole] = useState('viewer'); // 'admin', 'dispatcher', 'viewer'
+            const [currentPage, setCurrentPage] = useState('dashboard');
+            const [selectedVehicle, setSelectedVehicle] = useState(null);
+            const [alerts, setAlerts] = useState([]); // Simulated alerts
+
+            // Dummy Data
+            const [vehicles, setVehicles] = useState([
+                { id: 'V001', name: 'Agile-001', status: 'In Transit', location: 'New York, USA', speed: 60, fuel: 75, lastPing: '2025-08-22 14:00', type: 'Truck', driver: 'Sachin Mani' },
+                { id: 'V002', name: 'Agile-002', status: 'Parked', location: 'Los Angeles, USA', speed: 0, fuel: 90, lastPing: '2025-08-22 13:55', type: 'Van', driver: 'Harish Prabakaran' },
+                { id: 'V003', name: 'Agile-003', status: 'Maintenance', location: 'Chicago, USA', speed: 0, fuel: 20, lastPing: '2025-08-22 10:30', type: 'Truck', driver: 'Logu' },
+                { id: 'V004', name: 'Agile-004', status: 'On Route', location: 'Houston, USA', speed: 80, fuel: 50, lastPing: '2025-08-22 13:58', type: 'Car', driver: 'Dinesh' },
+                { id: 'V005', name: 'Agile-005', status: 'In Transit', location: 'Miami, USA', speed: 55, fuel: 65, lastPing: '2025-08-22 13:59', type: 'Truck', driver: 'Mohan' },
+            ]);
+
+            const [trips, setTrips] = useState([
+                { id: 'T001', vehicleId: 'V001', route: 'NY to LA', date: '2025-08-20', status: 'Completed', driver: 'Sachin Mani' },
+                { id: 'T002', vehicleId: 'V002', route: 'LA to SF', date: '2025-08-19', status: 'Completed', driver: 'Harish Prabakaran' },
+                { id: 'T003', vehicleId: 'V003', route: 'CHI to BOS', date: '2025-08-18', status: 'Cancelled', driver: 'Logu' },
+                { id: 'T004', vehicleId: 'V004', route: 'HOU to DAL', date: '2025-08-22', status: 'In Progress', driver: 'Dinesh' },
+                { id: 'T005', vehicleId: 'V005', route: 'MIA to ATL', date: '2025-08-21', status: 'Completed', driver: 'Mohan' },
+            ]);
+
+            const [drivers, setDrivers] = useState([
+                { id: 'D001', name: 'Sachin Mani', phone: '+91 8569741236', email: 'Sachin_Mani@example.com', status: 'Active' },
+                { id: 'D002', name: 'Harish Prabakaran', phone: '+91 7841253601', email: 'Harish_Prabakaran@example.com', status: 'Active' },
+                { id: 'D003', name: 'Logu', phone: '+91 9801247854', email: 'logu@example.com', status: 'On Leave' },
+                { id: 'D004', name: 'Dinesh', phone: '+91 9854712365', email: 'dinesh@example.com', status: 'Active' },
+                { id: 'D005', name: 'Mohan', phone: '+91 98545524274', email: 'mohan@example.com', status: 'Active' },
+            ]);
+
+            const [routes, setRoutes] = useState([
+                { id: 'R001', name: 'Interstate 95 Corridor', origin: 'New York', destination: 'Miami', distance: '1270 miles' },
+                { id: 'R002', name: 'West Coast Loop', origin: 'Los Angeles', destination: 'Seattle', distance: '1135 miles' },
+            ]);
+
+
+            useEffect(() => {
+                if (!isLoggedIn) return;
+
+                const interval = setInterval(() => {
+    
+                    setVehicles(prevVehicles => prevVehicles.map(v => {
+                        if (v.status === 'In Transit' || v.status === 'On Route') {
+                            return {
+                                ...v,
+                                speed: Math.floor(Math.random() * 40) + 40, // 40-80 mph
+                                fuel: Math.max(0, v.fuel - Math.floor(Math.random() * 2)), // Decrease fuel
+                                location: `Simulated Location near ${v.location.split(',')[0]}`,
+                                lastPing: new Date().toLocaleTimeString(),
+                            };
+                        }
+                        return v;
+                    }));
+
+                  
+                    const randomAlert = Math.random();
+                    if (randomAlert < 0.1 && vehicles.length > 0) {
+                        const randomVehicle = vehicles[Math.floor(Math.random() * vehicles.length)];
+                        const alertTypes = ['Delay', 'Breakdown', 'Route Deviation'];
+                        const type = alertTypes[Math.floor(Math.random() * alertTypes.length)];
+                        setAlerts(prev => [...prev, {
+                            id: Date.now(),
+                            vehicle: randomVehicle.name,
+                            type: type,
+                            message: `${randomVehicle.name} reported a ${type.toLowerCase()} near ${randomVehicle.location}.`,
+                            timestamp: new Date().toLocaleString(),
+                            read: false,
+                        }]);
+                    }
+                }, 5000); 
+
+                return () => clearInterval(interval);
+            }, [isLoggedIn, vehicles]);
+
+            // Alert management
+            const markAlertAsRead = (id) => {
+                setAlerts(prev => prev.map(alert => alert.id === id ? { ...alert, read: true } : alert));
+            };
+
+            const removeAlert = (id) => {
+                setAlerts(prev => prev.filter(alert => alert.id !== id));
+            };
+
+
+            return (
+                <AppContext.Provider
+                    value={{
+                        isLoggedIn, setIsLoggedIn, userRole, setUserRole, currentPage, setCurrentPage,
+                        vehicles, setVehicles, trips, setTrips, drivers, setDrivers, routes, setRoutes,
+                        selectedVehicle, setSelectedVehicle,
+                        alerts, markAlertAsRead, removeAlert
+                    }}
+                >
+                    {children}
+                </AppContext.Provider>
+            );
+        };
+
+   
+
+        const Button = ({ children, onClick, className = '', variant = 'primary', icon: Icon, disabled = false }) => {
+            const baseClasses = 'px-4 py-2 rounded-lg font-medium transition duration-200 ease-in-out flex items-center justify-center gap-2';
+            const variantClasses = {
+                primary: 'bg-blue-600 hover:bg-blue-700 text-white shadow-md',
+                secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800 border border-gray-300',
+                danger: 'bg-red-600 hover:bg-red-700 text-white',
+                outline: 'border border-blue-600 text-blue-600 hover:bg-blue-50',
+            };
+            const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
+
+            return (
+                <button
+                    onClick={onClick}
+                    className={`${baseClasses} ${variantClasses[variant]} ${className} ${disabledClasses}`}
+                    disabled={disabled}
+                >
+                    {Icon && <Icon size={18} />}
+                    {children}
+                </button>
+            );
+        };
+
+        const Input = ({ label, type = 'text', value, onChange, className = '', placeholder = '' }) => (
+            <div className="mb-4">
+                {label && <label className="block text-gray-700 text-sm font-bold mb-2">{label}</label>}
+                <input
+                    type={type}
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    className={`shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
+                />
+            </div>
+        );
+
+        const Card = ({ children, title, className = '', icon: Icon }) => (
+            <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`}>
+                {title && (
+                    <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                        {Icon && <Icon size={24} className="text-blue-600" />}
+                        {title}
+                    </h3>
+                )}
+                {children}
+            </div>
+        );
+
+        const Badge = ({ children, variant = 'default', className = '' }) => {
+            const baseClasses = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
+            const variantClasses = {
+                default: 'bg-gray-100 text-gray-800',
+                success: 'bg-green-100 text-green-800',
+                warning: 'bg-yellow-100 text-yellow-800',
+                danger: 'bg-red-100 text-red-800',
+                info: 'bg-blue-100 text-blue-800',
+            };
+            return (
+                <span className={`${baseClasses} ${variantClasses[variant]} ${className}`}>
+                    {children}
+                </span>
+            );
+        };
+
+        const LoadingSpinner = () => (
+            <div className="flex justify-center items-center h-full w-full">
+                <Loader2 className="animate-spin text-blue-600" size={48} />
+                <span className="sr-only">Loading...</span>
+            </div>
+        );
+
+
+        // --- Page Components ---
+
+        const LoginScreen = () => {
+            const { setIsLoggedIn, setUserRole, setCurrentPage } = useContext(AppContext);
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError('');
+
+                // Simulate API call
+                setTimeout(() => {
+                    if (username === 'admin' && password === 'admin') {
+                        setIsLoggedIn(true);
+                        setUserRole('admin');
+                        setCurrentPage('dashboard');
+                    } else if (username === 'dispatcher' && password === 'dispatcher') {
+                        setIsLoggedIn(true);
+                        setUserRole('dispatcher');
+                        setCurrentPage('dashboard');
+                    } else if (username === 'viewer' && password === 'viewer') {
+                        setIsLoggedIn(true);
+                        setUserRole('viewer');
+                        setCurrentPage('dashboard');
+                    } else {
+                        setError('Invalid username or password.');
+                    }
+                    setLoading(false);
+                }, 1000);
+            };
+
+            return (
+                <div className="flex min-h-screen bg-gradient-to-br from-blue-100 to-indigo-200 items-center justify-center p-4">
+                    <Card className="max-w-md w-full p-8 shadow-2xl">
+                        <div className="flex justify-center mb-6">
+                            <Truck size={64} className="text-blue-600" />
+                        </div>
+                        <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Welcome Back!</h2>
+                        <p className="text-center text-gray-600 mb-8">Sign in to your transport operations dashboard.</p>
+                        <form onSubmit={handleLogin}>
+                            <Input
+                                label="Username"
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="admin / dispatcher / viewer"
+                            />
+                            <Input
+                                label="Password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="admin / dispatcher / viewer"
+                            />
+                            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+                            <Button type="submit" className="w-full mt-4" disabled={loading}>
+                                {loading ? <LoadingSpinner /> : 'Login'}
+                            </Button>
+                        </form>
+                        <p className="text-center text-gray-500 text-sm mt-6">
+                            Forgot your password? <a href="#" className="text-blue-600 hover:underline">Reset here</a>
+                        </p>
+                    </Card>
+                </div>
+            );
+        };
+
+        const Dashboard = () => {
+            const { vehicles, alerts, setCurrentPage, setSelectedVehicle } = useContext(AppContext);
+
+            const activeVehicles = vehicles.filter(v => v.status === 'In Transit' || v.status === 'On Route').length;
+            const parkedVehicles = vehicles.filter(v => v.status === 'Parked').length;
+            const maintenanceVehicles = vehicles.filter(v => v.status === 'Maintenance').length;
+            const unreadAlerts = alerts.filter(a => !a.read).length;
+
+            const getStatusBadgeVariant = (status) => {
+                switch (status) {
+                    case 'In Transit':
+                    case 'On Route':
+                        return 'success';
+                    case 'Parked':
+                        return 'info';
+                    case 'Maintenance':
+                        return 'warning';
+                    default:
+                        return 'default';
+                }
+            };
+
+            const handleViewVehicle = (vehicle) => {
+                setSelectedVehicle(vehicle);
+                setCurrentPage('vehicleDetails');
+            };
+
+            return (
+                <div className="p-6 md:p-8 lg:p-10 bg-gray-50 min-h-screen">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
+
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <Card title="Total Vehicles" icon={Truck}>
+                            <p className="text-5xl font-extrabold text-blue-600">{vehicles.length}</p>
+                        </Card>
+                        <Card title="Active Vehicles" icon={Car}>
+                            <p className="text-5xl font-extrabold text-green-600">{activeVehicles}</p>
+                        </Card>
+                        <Card title="Unread Alerts" icon={Bell}>
+                            <p className="text-5xl font-extrabold text-red-600">{unreadAlerts}</p>
+                        </Card>
+                        <Card title="Vehicles in Maintenance" icon={Wrench}>
+                            <p className="text-5xl font-extrabold text-yellow-600">{maintenanceVehicles}</p>
+                        </Card>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Real-time Vehicle Status */}
+                        <Card title="Real-time Vehicle Status" icon={MapPin} className="lg:col-span-2">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Speed</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Ping</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {vehicles.slice(0, 5).map(vehicle => ( // Show top 5 for brevity
+                                            <tr key={vehicle.id}>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{vehicle.name}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    <Badge variant={getStatusBadgeVariant(vehicle.status)}>{vehicle.status}</Badge>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vehicle.location}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vehicle.speed} km/h</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vehicle.lastPing}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <Button onClick={() => handleViewVehicle(vehicle)} variant="outline" className="text-xs py-1 px-2">
+                                                        <Eye size={16} /> View
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p className="mt-4 text-sm text-gray-600">
+                                <a href="#" onClick={() => setCurrentPage('vehicleList')} className="text-blue-600 hover:underline">View all vehicles</a>
+                            </p>
+                        </Card>
+
+                        {/* Recent Alerts */}
+                        <Card title="Recent Alerts" icon={Bell}>
+                            {unreadAlerts > 0 ? (
+                                <ul className="space-y-3">
+                                    {alerts.filter(a => !a.read).slice(0, 5).map(alert => ( // Show top 5 unread alerts
+                                        <li key={alert.id} className="p-3 bg-red-50 rounded-lg border border-red-200 flex items-start gap-3">
+                                            <XCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-red-700">{alert.type}: {alert.vehicle}</p>
+                                                <p className="text-xs text-red-600">{alert.message}</p>
+                                                <span className="text-xs text-red-400 block mt-1">{alert.timestamp}</span>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="text-center text-gray-500 py-8">
+                                    <Info size={48} className="mx-auto text-gray-300 mb-3" />
+                                    <p>No new alerts at the moment.</p>
+                                </div>
+                            )}
+                            <p className="mt-4 text-sm text-gray-600">
+                                <a href="#" onClick={() => setCurrentPage('alerts')} className="text-blue-600 hover:underline">Manage all alerts</a>
+                            </p>
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        const VehicleList = () => {
+            const { vehicles, setCurrentPage, setSelectedVehicle } = useContext(AppContext);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filterStatus, setFilterStatus] = useState('All');
+
+            const filteredVehicles = vehicles.filter(vehicle => {
+                const matchesSearch = vehicle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    vehicle.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    vehicle.driver.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesStatus = filterStatus === 'All' || vehicle.status === filterStatus;
+                return matchesSearch && matchesStatus;
+            });
+
+            const getStatusBadgeVariant = (status) => {
+                switch (status) {
+                    case 'In Transit':
+                    case 'On Route':
+                        return 'success';
+                    case 'Parked':
+                        return 'info';
+                    case 'Maintenance':
+                        return 'warning';
+                    default:
+                        return 'default';
+                }
+            };
+
+            const handleViewDetails = (vehicle) => {
+                setSelectedVehicle(vehicle);
+                setCurrentPage('vehicleDetails');
+            };
+
+            return (
+                <div className="p-6 md:p-8 lg:p-10 bg-gray-50 min-h-screen">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Vehicle Management</h1>
+
+                    <Card className="mb-6">
+                        <div className="flex flex-col md:flex-row gap-4 items-center mb-6">
+                            <Input
+                                type="text"
+                                placeholder="Search by vehicle name, location, driver..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="flex-grow"
+                                label="Search Vehicles"
+                            />
+                            <div className="flex-shrink-0">
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Filter by Status</label>
+                                <select
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value)}
+                                    className="shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                    <option value="All">All Statuses</option>
+                                    <option value="In Transit">In Transit</option>
+                                    <option value="On Route">On Route</option>
+                                    <option value="Parked">Parked</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto rounded-lg border border-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle ID</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {filteredVehicles.length > 0 ? (
+                                        filteredVehicles.map(vehicle => (
+                                            <tr key={vehicle.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{vehicle.id}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{vehicle.name}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vehicle.type}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <Badge variant={getStatusBadgeVariant(vehicle.status)}>{vehicle.status}</Badge>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vehicle.location}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vehicle.driver}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <Button onClick={() => handleViewDetails(vehicle)} variant="outline" className="text-xs py-1 px-2">
+                                                        <Eye size={16} /> View Details
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                                                No vehicles found matching your criteria.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+                </div>
+            );
+        };
+
+        const VehicleDetails = () => {
+            const { selectedVehicle, setCurrentPage, vehicles } = useContext(AppContext);
+
+            // Fallback if direct access or refresh
+            const vehicle = selectedVehicle || vehicles[0]; // Or redirect to list if no vehicle selected
+
+            if (!vehicle) {
+                return (
+                    <div className="p-6 md:p-8 lg:p-10 bg-gray-50 min-h-screen text-center">
+                        <h1 className="text-3xl font-bold text-gray-900 mb-8">Vehicle Details</h1>
+                        <p className="text-lg text-gray-600">No vehicle selected. Please go back to the vehicle list.</p>
+                        <Button onClick={() => setCurrentPage('vehicleList')} className="mt-4">
+                            Go to Vehicle List
+                        </Button>
+                    </div>
+                );
+            }
+
+            const getStatusBadgeVariant = (status) => {
+                switch (status) {
+                    case 'In Transit':
+                    case 'On Route':
+                        return 'success';
+                    case 'Parked':
+                        return 'info';
+                    case 'Maintenance':
+                        return 'warning';
+                    default:
+                        return 'default';
+                }
+            };
+
+            return (
+                <div className="p-6 md:p-8 lg:p-10 bg-gray-50 min-h-screen">
+                    <div className="flex items-center gap-4 mb-6">
+                        <Button onClick={() => setCurrentPage('vehicleList')} variant="secondary" icon={XCircle}>
+                            Back to List
+                        </Button>
+                        <h1 className="text-3xl font-bold text-gray-900">{vehicle.name} Details</h1>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Vehicle Info Card */}
+                        <Card title="Vehicle Information" icon={Info} className="lg:col-span-1">
+                            <div className="space-y-4 text-gray-700">
+                                <p className="flex items-center gap-2"><span className="font-semibold text-gray-800"><Truck size={18} /> ID:</span> {vehicle.id}</p>
+                                <p className="flex items-center gap-2"><span className="font-semibold text-gray-800"><Package size={18} /> Type:</span> {vehicle.type}</p>
+                                <p className="flex items-center gap-2"><span className="font-semibold text-gray-800"><User size={18} /> Driver:</span> {vehicle.driver}</p>
+                                <p className="flex items-center gap-2">
+                                    <span className="font-semibold text-gray-800"><Car size={18} /> Status:</span>
+                                    <Badge variant={getStatusBadgeVariant(vehicle.status)}>{vehicle.status}</Badge>
+                                </p>
+                                <p className="flex items-center gap-2"><span className="font-semibold text-gray-800"><Fuel size={18} /> Fuel Level:</span> {vehicle.fuel}%</p>
+                                <p className="flex items-center gap-2"><span className="font-semibold text-gray-800"><Clock size={18} /> Last Ping:</span> {vehicle.lastPing}</p>
+                            </div>
+                        </Card>
+
+                        {/* Location Tracking */}
+                        <Card title="Real-time Location" icon={MapPin} className="lg:col-span-2">
+                            <div className="w-full h-80 bg-gray-200 rounded-lg flex items-center justify-center text-gray-600 text-lg mb-4">
+                                {/* Placeholder for an actual map component */}
+                                <p>Interactive Map Placeholder for {vehicle.location}</p>
+                            </div>
+                            <p className="text-gray-700 flex items-center gap-2"><MapPin size={18} /> Current Location: <span className="font-medium">{vehicle.location}</span></p>
+                            <p className="text-gray-700 flex items-center gap-2"><Loader2 size={18} /> Current Speed: <span className="font-medium">{vehicle.speed} km/h</span></p>
+                            <Button variant="primary" className="mt-4" onClick={() => alert('Simulating live tracking...')}>
+                                <Eye size={18} /> View Live Tracking
+                            </Button>
+                        </Card>
+
+                        {/* Trip History for this Vehicle */}
+                        <Card title="Trip History" icon={History} className="lg:col-span-3">
+                            <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trip ID</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Route</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {useContext(AppContext).trips.filter(t => t.vehicleId === vehicle.id).map(trip => (
+                                            <tr key={trip.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{trip.id}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{trip.date}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{trip.route}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <Badge variant={trip.status === 'Completed' ? 'success' : trip.status === 'In Progress' ? 'info' : 'danger'}>{trip.status}</Badge>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        const TripHistory = () => {
+            const { trips } = useContext(AppContext);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filterDate, setFilterDate] = useState('');
+            const [filterStatus, setFilterStatus] = useState('All');
+
+            const filteredTrips = trips.filter(trip => {
+                const matchesSearch = trip.route.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    trip.vehicleId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    trip.driver.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesDate = filterDate === '' || trip.date === filterDate;
+                const matchesStatus = filterStatus === 'All' || trip.status === filterStatus;
+                return matchesSearch && matchesDate && matchesStatus;
+            });
+
+            return (
+                <div className="p-6 md:p-8 lg:p-10 bg-gray-50 min-h-screen">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Trip History</h1>
+
+                    <Card className="mb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <Input
+                                type="text"
+                                placeholder="Search by route, vehicle ID, driver..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                label="Search Trips"
+                            />
+                            <Input
+                                type="date"
+                                value={filterDate}
+                                onChange={(e) => setFilterDate(e.target.value)}
+                                label="Filter by Date"
+                            />
+                            <div>
+                                <label className="block text-gray-700 text-sm font-bold mb-2">Filter by Status</label>
+                                <select
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value)}
+                                    className="shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                                >
+                                    <option value="All">All Statuses</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto rounded-lg border border-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trip ID</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Route</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {filteredTrips.length > 0 ? (
+                                        filteredTrips.map(trip => (
+                                            <tr key={trip.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{trip.id}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{useContext(AppContext).vehicles.find(v => v.id === trip.vehicleId)?.name}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{trip.driver}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{trip.date}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{trip.route}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <Badge variant={trip.status === 'Completed' ? 'success' : trip.status === 'In Progress' ? 'info' : 'danger'}>{trip.status}</Badge>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                                                No trips found matching your criteria.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+                </div>
+            );
+        };
+
+        const AlertsNotifications = () => {
+            const { alerts, markAlertAsRead, removeAlert } = useContext(AppContext);
+
+            const unreadAlerts = alerts.filter(a => !a.read);
+            const readAlerts = alerts.filter(a => a.read);
+
+            return (
+                <div className="p-6 md:p-8 lg:p-10 bg-gray-50 min-h-screen">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Alerts & Notifications</h1>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Unread Alerts */}
+                        <Card title={`Unread Alerts (${unreadAlerts.length})`} icon={Bell}>
+                            {unreadAlerts.length > 0 ? (
+                                <ul className="space-y-4">
+                                    {unreadAlerts.map(alert => (
+                                        <li key={alert.id} className="p-4 bg-red-50 rounded-lg border border-red-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                            <div className="flex-grow">
+                                                <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                                                    <XCircle size={18} /> {alert.type} Alert: <span className="text-red-800">{alert.vehicle}</span>
+                                                </p>
+                                                <p className="text-xs text-red-600 mt-1">{alert.message}</p>
+                                                <span className="text-xs text-red-400 block mt-2">{alert.timestamp}</span>
+                                            </div>
+                                            <div className="flex-shrink-0 flex gap-2 mt-3 sm:mt-0">
+                                                <Button onClick={() => markAlertAsRead(alert.id)} variant="secondary" className="text-xs py-1 px-2">
+                                                    Mark as Read
+                                                </Button>
+                                                <Button onClick={() => removeAlert(alert.id)} variant="danger" className="text-xs py-1 px-2">
+                                                    Dismiss
+                                                </Button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="text-center text-gray-500 py-8">
+                                    <Info size={48} className="mx-auto text-gray-300 mb-3" />
+                                    <p>No unread alerts.</p>
+                                </div>
+                            )}
+                        </Card>
+
+                        {/* Read Alerts */}
+                        <Card title={`Read Alerts (${readAlerts.length})`} icon={Bell}>
+                            {readAlerts.length > 0 ? (
+                                <ul className="space-y-4">
+                                    {readAlerts.map(alert => (
+                                        <li key={alert.id} className="p-4 bg-gray-100 rounded-lg border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                            <div className="flex-grow">
+                                                <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                                    <Bell size={18} className="text-gray-500" /> {alert.type} Alert: <span className="text-gray-800">{alert.vehicle}</span>
+                                                </p>
+                                                <p className="text-xs text-gray-600 mt-1">{alert.message}</p>
+                                                <span className="text-xs text-gray-400 block mt-2">{alert.timestamp}</span>
+                                            </div>
+                                            <div className="flex-shrink-0 mt-3 sm:mt-0">
+                                                <Button onClick={() => removeAlert(alert.id)} variant="danger" className="text-xs py-1 px-2">
+                                                    Remove
+                                                </Button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="text-center text-gray-500 py-8">
+                                    <Info size={48} className="mx-auto text-gray-300 mb-3" />
+                                    <p>No read alerts.</p>
+                                </div>
+                            )}
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminPanel = () => {
+            const { userRole, vehicles, setVehicles, drivers, setDrivers, routes, setRoutes } = useContext(AppContext);
+            const [activeTab, setActiveTab] = useState('vehicles'); // 'vehicles', 'drivers', 'routes'
+
+            if (userRole !== 'admin') {
+                return (
+                    <div className="p-6 md:p-8 lg:p-10 bg-gray-50 min-h-screen text-center flex flex-col items-center justify-center">
+                        <Settings size={64} className="text-red-400 mb-4" />
+                        <h1 className="text-3xl font-bold text-gray-900 mb-4">Access Denied</h1>
+                        <p className="text-lg text-gray-600">You do not have administrative privileges to view this page.</p>
+                    </div>
+                );
+            }
+
+            // Common UI for Add/Edit Form
+            const FormModal = ({ type, data, onClose, onSubmit }) => {
+                const [formData, setFormData] = useState(data || {});
+
+                const handleChange = (e) => {
+                    const { name, value } = e.target;
+                    setFormData(prev => ({ ...prev, [name]: value }));
+                };
+
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    onSubmit(formData);
+                    onClose();
+                };
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <Card className="w-full max-w-lg p-6 relative">
+                            <Button onClick={onClose} variant="secondary" className="absolute top-4 right-4 text-gray-500 hover:text-gray-700" icon={XCircle} />
+                            <h2 className="text-2xl font-bold mb-6 text-gray-800">{data ? 'Edit' : 'Add New'} {type.slice(0, -1)}</h2>
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                {type === 'vehicles' && (
+                                    <>
+                                        <Input label="Name" name="name" value={formData.name || ''} onChange={handleChange} placeholder="e.g., Truck 006" />
+                                        <Input label="Type" name="type" value={formData.type || ''} onChange={handleChange} placeholder="e.g., Truck, Van, Car" />
+                                        <Input label="Status" name="status" value={formData.status || ''} onChange={handleChange} placeholder="e.g., In Transit, Parked, Maintenance" />
+                                        <Input label="Driver" name="driver" value={formData.driver || ''} onChange={handleChange} placeholder="e.g., New Driver Name" />
+                                        {/* For simplicity, we won't add full location/speed/fuel editing here */}
+                                    </>
+                                )}
+                                {type === 'drivers' && (
+                                    <>
+                                        <Input label="Name" name="name" value={formData.name || ''} onChange={handleChange} placeholder="e.g., Sarah Lee" />
+                                        <Input label="Phone" name="phone" value={formData.phone || ''} onChange={handleChange} placeholder="e.g., 555-123-4567" />
+                                        <Input label="Email" name="email" value={formData.email || ''} onChange={handleChange} placeholder="e.g., sarah@example.com" />
+                                        <Input label="Status" name="status" value={formData.status || ''} onChange={handleChange} placeholder="e.g., Active, On Leave" />
+                                    </>
+                                )}
+                                {type === 'routes' && (
+                                    <>
+                                        <Input label="Route Name" name="name" value={formData.name || ''} onChange={handleChange} placeholder="e.g., North-South Corridor" />
+                                        <Input label="Origin" name="origin" value={formData.origin || ''} onChange={handleChange} placeholder="e.g., City A" />
+                                        <Input label="Destination" name="destination" value={formData.destination || ''} onChange={handleChange} placeholder="e.g., City B" />
+                                        <Input label="Distance" name="distance" value={formData.distance || ''} onChange={handleChange} placeholder="e.g., 300 miles" />
+                                    </>
+                                )}
+                                <Button type="submit" className="w-full mt-6">{data ? 'Save Changes' : 'Add'}</Button>
+                            </form>
+                        </Card>
+                    </div>
+                );
+            };
+
+            const [showModal, setShowModal] = useState(false);
+            const [modalData, setModalData] = useState(null); // Data for editing
+            const [modalType, setModalType] = useState(''); // 'vehicles', 'drivers', 'routes'
+
+            const handleAdd = (type) => {
+                setModalData(null);
+                setModalType(type);
+                setShowModal(true);
+            };
+
+            const handleEdit = (type, item) => {
+                setModalData(item);
+                setModalType(type);
+                setShowModal(true);
+            };
+
+            const handleDelete = (type, id) => {
+                if (window.confirm(`Are you sure you want to delete this ${type.slice(0, -1)}?`)) {
+                    if (type === 'vehicles') setVehicles(prev => prev.filter(item => item.id !== id));
+                    else if (type === 'drivers') setDrivers(prev => prev.filter(item => item.id !== id));
+                    else if (type === 'routes') setRoutes(prev => prev.filter(item => item.id !== id));
+                }
+            };
+
+            const handleModalSubmit = (newData) => {
+                if (modalType === 'vehicles') {
+                    if (modalData) { // Edit
+                        setVehicles(prev => prev.map(v => v.id === modalData.id ? { ...v, ...newData } : v));
+                    } else { // Add
+                        setVehicles(prev => [...prev, { id: `V${String(prev.length + 1).padStart(3, '0')}`, ...newData, location: 'Unknown', speed: 0, fuel: 100, lastPing: new Date().toLocaleTimeString() }]);
+                    }
+                } else if (modalType === 'drivers') {
+                    if (modalData) { // Edit
+                        setDrivers(prev => prev.map(d => d.id === modalData.id ? { ...d, ...newData } : d));
+                    } else { // Add
+                        setDrivers(prev => [...prev, { id: `D${String(prev.length + 1).padStart(3, '0')}`, ...newData }]);
+                    }
+                } else if (modalType === 'routes') {
+                    if (modalData) { // Edit
+                        setRoutes(prev => prev.map(r => r.id === modalData.id ? { ...r, ...newData } : r));
+                    } else { // Add
+                        setRoutes(prev => [...prev, { id: `R${String(prev.length + 1).padStart(3, '0')}`, ...newData }]);
+                    }
+                }
+            };
+
+
+            const renderTable = (data, type) => (
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{type === 'vehicles' ? 'ID' : type === 'drivers' ? 'ID' : 'ID'}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{type === 'vehicles' ? 'Name' : type === 'drivers' ? 'Name' : 'Route Name'}</th>
+                                {type === 'vehicles' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>}
+                                {type === 'vehicles' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>}
+                                {type === 'drivers' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>}
+                                {type === 'drivers' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>}
+                                {type === 'drivers' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>}
+                                {type === 'routes' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origin</th>}
+                                {type === 'routes' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destination</th>}
+                                {type === 'routes' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Distance</th>}
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {data.length > 0 ? (
+                                data.map(item => (
+                                    <tr key={item.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{item.id}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
+                                        {type === 'vehicles' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.type}</td>}
+                                        {type === 'vehicles' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><Badge variant={item.status === 'In Transit' || item.status === 'On Route' ? 'success' : item.status === 'Parked' ? 'info' : 'warning'}>{item.status}</Badge></td>}
+                                        {type === 'drivers' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.phone}</td>}
+                                        {type === 'drivers' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.email}</td>}
+                                        {type === 'drivers' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><Badge variant={item.status === 'Active' ? 'success' : 'default'}>{item.status}</Badge></td>}
+                                        {type === 'routes' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.origin}</td>}
+                                        {type === 'routes' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.destination}</td>}
+                                        {type === 'routes' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.distance}</td>}
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            <Button onClick={() => handleEdit(type, item)} variant="secondary" className="text-xs py-1 px-2">Edit</Button>
+                                            <Button onClick={() => handleDelete(type, item.id)} variant="danger" className="text-xs py-1 px-2">Delete</Button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="100%" className="px-6 py-8 text-center text-gray-500">
+                                        No {type} found.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            );
+
+            return (
+                <div className="p-6 md:p-8 lg:p-10 bg-gray-50 min-h-screen">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Panel</h1>
+
+                    <div className="mb-6 flex flex-wrap gap-3">
+                        <Button onClick={() => setActiveTab('vehicles')} variant={activeTab === 'vehicles' ? 'primary' : 'secondary'} icon={Truck}>
+                            Manage Vehicles
+                        </Button>
+                        <Button onClick={() => setActiveTab('drivers')} variant={activeTab === 'drivers' ? 'primary' : 'secondary'} icon={Users}>
+                            Manage Drivers
+                        </Button>
+                        <Button onClick={() => setActiveTab('routes')} variant={activeTab === 'routes' ? 'primary' : 'secondary'} icon={Route}>
+                            Manage Routes
+                        </Button>
+                    </div>
+
+                    {activeTab === 'vehicles' && (
+                        <Card title="Vehicles" icon={Truck}>
+                            <Button onClick={() => handleAdd('vehicles')} className="mb-4" icon={PlusCircle}>Add New Vehicle</Button>
+                            {renderTable(vehicles, 'vehicles')}
+                        </Card>
+                    )}
+                    {activeTab === 'drivers' && (
+                        <Card title="Drivers" icon={Users}>
+                            <Button onClick={() => handleAdd('drivers')} className="mb-4" icon={PlusCircle}>Add New Driver</Button>
+                            {renderTable(drivers, 'drivers')}
+                        </Card>
+                    )}
+                    {activeTab === 'routes' && (
+                        <Card title="Routes" icon={Route}>
+                            <Button onClick={() => handleAdd('routes')} className="mb-4" icon={PlusCircle}>Add New Route</Button>
+                            {renderTable(routes, 'routes')}
+                        </Card>
+                    )}
+
+                    {showModal && (
+                        <FormModal
+                            type={modalType}
+                            data={modalData}
+                            onClose={() => setShowModal(false)}
+                            onSubmit={handleModalSubmit}
+                        />
+                    )}
+                </div>
+            );
+        };
+
+
+        // --- Main App Layout ---
+        const App = () => {
+            const { isLoggedIn, setIsLoggedIn, setCurrentPage, currentPage, userRole } = useContext(AppContext);
+
+            const navItems = [
+                { name: 'Dashboard', icon: Car, page: 'dashboard', roles: ['admin', 'dispatcher', 'viewer'] },
+                { name: 'Vehicles', icon: Truck, page: 'vehicleList', roles: ['admin', 'dispatcher', 'viewer'] },
+                { name: 'Trip History', icon: History, page: 'tripHistory', roles: ['admin', 'dispatcher', 'viewer'] },
+                { name: 'Alerts', icon: Bell, page: 'alerts', roles: ['admin', 'dispatcher', 'viewer'] },
+                { name: 'Admin Panel', icon: Settings, page: 'adminPanel', roles: ['admin'] },
+            ];
+
+            const renderPage = () => {
+                switch (currentPage) {
+                    case 'dashboard':
+                        return <Dashboard />;
+                    case 'vehicleList':
+                        return <VehicleList />;
+                    case 'vehicleDetails':
+                        return <VehicleDetails />;
+                    case 'tripHistory':
+                        return <TripHistory />;
+                    case 'alerts':
+                        return <AlertsNotifications />;
+                    case 'adminPanel':
+                        return <AdminPanel />;
+                    default:
+                        return <Dashboard />;
+                }
+            };
+
+            if (!isLoggedIn) {
+                return <LoginScreen />;
+            }
+
+            return (
+                <div className="flex flex-col min-h-screen font-sans bg-gray-100 text-gray-800">
+                    {/* Header */}
+                    <header className="bg-blue-800 text-white p-4 shadow-lg flex items-center justify-between flex-wrap gap-4 sticky top-0 z-10">
+                        <div className="flex items-center gap-3">
+                            <Truck size={32} className="text-blue-200" />
+                            <h1 className="text-2xl font-bold tracking-tight">Transport Monitor</h1>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm font-medium">Role: <Badge variant="info">{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</Badge></span>
+                            <Button onClick={() => setIsLoggedIn(false)} variant="secondary" icon={LogOut}>
+                                Logout
+                            </Button>
+                        </div>
+                    </header>
+
+                    {/* Main Content Area */}
+                    <div className="flex flex-1 flex-col md:flex-row">
+                        {/* Sidebar Navigation */}
+                        <nav className="bg-blue-700 text-white w-full md:w-64 p-4 md:p-6 shadow-xl flex-shrink-0">
+                            <ul className="space-y-3">
+                                {navItems.map(item => (
+                                    (item.roles.includes(userRole) || userRole === 'admin') && (
+                                        <li key={item.name}>
+                                            <button
+                                                onClick={() => setCurrentPage(item.page)}
+                                                className={`flex items-center gap-3 w-full py-2 px-3 rounded-lg text-left transition-colors duration-200
+                      ${currentPage === item.page ? 'bg-blue-900 text-white shadow-inner' : 'hover:bg-blue-600 text-blue-100 hover:text-white'}`}
+                                            >
+                                                <item.icon size={20} />
+                                                <span className="text-lg font-medium">{item.name}</span>
+                                            </button>
+                                        </li>
+                                    )
+                                ))}
+                            </ul>
+                        </nav>
+
+                        {/* Page Content */}
+                        <main className="flex-1 overflow-auto bg-gray-50">
+                            {renderPage()}
+                        </main>
+                    </div>
+
+                    {/* Footer */}
+                    <footer className="bg-gray-800 text-gray-300 p-6 text-center shadow-inner">
+                        <p className="text-sm">&copy; {new Date().getFullYear()} Transport Monitor. All rights reserved.</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        // This is the entry point where the App component is rendered inside the AppProvider
+        const ProvidedApp = () => {
+            return (
+                <AppProvider>
+                    <App />
+                </AppProvider>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ProvidedApp />);
+    </script>
+</body>
+</html>
